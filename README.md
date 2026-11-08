@@ -45,14 +45,32 @@ mediaforge/core/                no GUI code here (easy to test / reuse)
     binaries.py                 find ffmpeg/ffprobe, detect available encoders
     settings.py, util.py
 mediaforge/ui/
-    main_window.py              tabs + queue/log panel + menus
-    ffmpeg_tab.py               file list, options, live command preview
-    join_tab.py                 ordered clip list + join options
-    ytdlp_tab.py                URL box, format table, download options
-    queue_panel.py              job table with progress, cancel, retry
-    settings_dialog.py
+    kit/                        design system: theme, springs, icons, controls, layout, sheets, toasts
+    form.py                     one declarative field list per options dataclass
+    pages/                      convert, join, download, queue, log
+    main_window.py              sidebar + pages
+    sheets.py, sidebar.py, preset_bar.py   Settings / Updates sheets, navigation, presets
 tests/                          test_builder.py, test_join.py, test_ytdlp.py
 ```
+
+## The interface
+
+A Windows-native take on the macOS / iOS look, built from one small design system in `mediaforge/ui/kit/`.
+
+- **Layout** - a sidebar (Convert, Join, Download | Queue, Log; Updates and Settings at the bottom) beside the content.
+  Narrow windows collapse the sidebar to icons and stack two-column screens. Shortcuts: `Ctrl+1`..`Ctrl+5` pages,
+  `Ctrl+,` Settings, `Ctrl+U` Updates, `Ctrl+Q` quit. Messages appear as toasts at the bottom instead of a status bar.
+- **Look** - Apple system colors in light and dark (follows Windows live), a 4-pt spacing grid, 44-px hit targets,
+  Dynamic-Type-style text roles that follow Windows' *Settings > Accessibility > Text size*, SVG symbols drawn in
+  the theme color, and Windows 11 **Mica** behind a translucent sidebar (opaque on Windows 10).
+- **Motion** - springs, not fixed-duration transitions: buttons scale to 0.97 the moment you press, toggles and the
+  segmented control slide on interruptible springs, the sidebar's selection pill glides between pages, progress bars
+  ease toward their value, sheets and toasts rise in. Keyboard-driven changes never animate, and Windows'
+  *Animation effects* off setting (reduced motion) makes everything snap.
+- **Feedback** - Windows desktop apps have no haptics, so *Settings > Feedback* offers an optional, very quiet system sound
+  when jobs finish or fail (off by default).
+- **Code shape** - every option screen is a `Form`: one list of fields per options dataclass drives the widgets, change
+  tracking, collecting and presets. The Convert and Join screens share one base class.
 
 ## Updates (ffmpeg and yt-dlp)
 
