@@ -1,5 +1,7 @@
 # MediaForge
 
+**Download:** get `MediaForge_setup_vX.Y.Z.exe` from the [latest release](https://github.com/Farizma/MediaForge/releases/latest) and run it.
+
 A desktop GUI for **ffmpeg** and **yt-dlp**, built with Python + PySide6.
 
 ## Run it
@@ -60,19 +62,29 @@ A Windows-native take on the macOS / iOS look, built from one small design syste
 - **Layout** - a sidebar (Convert, Join, Download | Queue, Log; Updates and Settings at the bottom) beside the content.
   Narrow windows collapse the sidebar to icons and stack two-column screens. Shortcuts: `Ctrl+1`..`Ctrl+5` pages,
   `Ctrl+,` Settings, `Ctrl+U` Updates, `Ctrl+Q` quit. Messages appear as toasts at the bottom instead of a status bar.
-- **Look** - Apple system colors in light and dark (follows Windows live), a 4-pt spacing grid, 44-px hit targets,
-  Dynamic-Type-style text roles that follow Windows' *Settings > Accessibility > Text size*, SVG symbols drawn in
-  the theme color, and Windows 11 **Mica** behind a translucent sidebar (opaque on Windows 10).
+- **Look** - matches Media Vault: dark colourways on near-black (Midnight Obsidian by default; pick another in
+  *Settings > Appearance*, it previews live), white-tint glass buttons and cards with hairline edges, a white primary
+  button, a soft glow from the top of the page in the highlight colour, colour icon tiles in the sidebar, and mono
+  upper-case section labels. Fonts are bundled (Plus Jakarta Sans and JetBrains Mono, both SIL OFL, in `assets/fonts`).
+  A 4-pt spacing grid, 44-px hit targets, text roles that follow Windows' *Settings > Accessibility > Text size*,
+  and a title bar coloured to match the sidebar on Windows 11.
 - **Motion** - springs, not fixed-duration transitions: buttons scale to 0.97 the moment you press, toggles and the
-  segmented control slide on interruptible springs, the sidebar's selection pill glides between pages, progress bars
-  ease toward their value, sheets and toasts rise in. Keyboard-driven changes never animate, and Windows'
+  segmented control's white pill slide on interruptible springs, the sidebar's selection pill glides between pages, progress bars
+  ease toward their value, sheets rise in over a dark wash and toasts rise in. Keyboard-driven changes never animate, and Windows'
   *Animation effects* off setting (reduced motion) makes everything snap.
 - **Feedback** - Windows desktop apps have no haptics, so *Settings > Feedback* offers an optional, very quiet system sound
   when jobs finish or fail (off by default).
 - **Code shape** - every option screen is a `Form`: one list of fields per options dataclass drives the widgets, change
   tracking, collecting and presets. The Convert and Join screens share one base class.
 
-## Updates (ffmpeg and yt-dlp)
+## Updates (MediaForge, ffmpeg and yt-dlp)
+
+**MediaForge itself** checks [GitHub releases](https://github.com/Farizma/MediaForge/releases) (at start-up, at most
+once a day, and from *Updates*). When a newer version exists a toast offers **Update**: it downloads
+`MediaForge_setup_v<version>.exe`, checks it against the release's `.sha256` (no checksum, no install), asks, then
+closes MediaForge and opens the setup wizard, which upgrades in place. It never installs without asking, even with
+*Install updates automatically* on. Running from source, Update opens the release page instead.
+
 
 **Help > Check for updates...** shows the installed and latest version of both tools and installs newer ones.
 
@@ -148,9 +160,16 @@ Options (add them after the file name in a terminal): `--installer` also builds 
 (slower to start), `--no-ffmpeg` skips bundling ffmpeg, `--clean` starts from scratch, `--check` only
 verifies the prerequisites. `BUILD_EXE.bat` has to stay in the project folder (it uses `tools\build_exe.py`).
 
-**No Windows machine?** Push the project to GitHub: `.github/workflows/build-windows.yml` runs the tests and builds
-the zip + installer on a Windows runner (Actions > *Build Windows* > *Run workflow*, or push a tag like `v0.3.0`
-for a Release). It also rebuilds every Monday so the bundled tools stay fresh.
+**The setup wizard (one click):** double-click **`BUILD_INSTALLER.bat`**. It finds Inno Setup 6 (and, if it's
+missing, *asks* before installing it with winget), then runs the build above with `--installer`. Result:
+`dist\MediaForge_setup_v<version>.exe` - a normal Windows setup wizard that installs for the current user
+(no administrator rights), adds Start-menu and optional desktop shortcuts, and an uninstaller - plus
+`dist\MediaForge_setup_v<version>.exe.sha256`.
+
+**Releases:** bump `__version__` in `mediaforge/__init__.py`, add `release-notes/v<version>.md`, then push a tag
+(`git tag v1.0.1 && git push origin v1.0.1`). `.github/workflows/release.yml` runs the tests, builds the setup wizard
+on a Windows runner and publishes a GitHub release with the installer, its `.sha256` and the zip. *Actions > Release >
+Run workflow* builds the same files as a downloadable artifact without publishing.
 
 Good to know:
 - **ffmpeg licence** - the bundled "essentials" build is GPL v3. If you redistribute the zip/installer,
