@@ -92,7 +92,7 @@ class UpdateService(QObject):
             st.note = "Install or update ffmpeg with your package manager (brew, apt, dnf...)."
             return st
         if custom_path:
-            st.note = "File > Settings points at a specific ffmpeg; clear that to use downloaded updates."
+            st.note = "Settings points at a specific ffmpeg; clear that to use downloaded updates."
         try:
             st.latest = updater.latest_ffmpeg_version()
         except UpdateError as exc:
