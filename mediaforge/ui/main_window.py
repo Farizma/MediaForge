@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
             QShortcut(QKeySequence(f"Ctrl+{i}"), self).activated.connect(lambda k=key: self.side.select(k, animate=False))
         QShortcut(QKeySequence("Ctrl+,"), self).activated.connect(self.open_settings)
         QShortcut(QKeySequence("Ctrl+U"), self).activated.connect(self.open_updates)
-        QShortcut(QKeySequence.StandardKey.Quit, self).activated.connect(self.close)
+        QShortcut(QKeySequence("Ctrl+Q"), self).activated.connect(self.close)   # StandardKey.Quit is unbound on Windows
 
     # ------------------------------------------------------------- appearance
     def showEvent(self, e) -> None:

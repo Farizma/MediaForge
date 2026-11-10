@@ -205,7 +205,7 @@ def check_options(o: DownloadOptions, urls: list[str], has_ffmpeg: bool) -> list
         out.append(("warn", f"Doesn't look like a URL: {bad[0]}"))
     if not has_ffmpeg:
         out.append(("warn", "ffmpeg not found - merging video + audio, audio conversion and "
-                            "embedding won't work. Set it in File > Settings."))
+                            "embedding won't work. Set it in Settings."))
     if o.mode == "video" and o.container == "webm" and o.compat:
         out.append(("warn", "'Most compatible' uses H.264/AAC, which WebM can't hold; "
                             "choose MP4 or Automatic."))
