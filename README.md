@@ -166,9 +166,9 @@ missing, *asks* before installing it with winget), then runs the build above wit
 (no administrator rights), adds Start-menu and optional desktop shortcuts, and an uninstaller - plus
 `dist\MediaForge_setup_v<version>.exe.sha256`.
 
-**Releases:** bump `__version__` in `mediaforge/__init__.py`, add `release-notes/v<version>.md`, then push a tag
-(`git tag v1.0.1 && git push origin v1.0.1`). `.github/workflows/release.yml` runs the tests, builds the setup wizard
-on a Windows runner and publishes a GitHub release with the installer, its `.sha256` and the zip. *Actions > Release >
+**Releases:** bump `__version__` in `mediaforge/__init__.py`, add `release-notes/v<version>.md`, then on GitHub choose
+*Releases > Draft a new release*, type the tag (`v1.0.1`), and Publish (or push the tag: `git tag v1.0.1 && git push origin v1.0.1`). `.github/workflows/release.yml` runs the tests, builds the setup wizard
+on a Windows runner and attaches the installer, its `.sha256` and the zip to the release (creating it if you pushed a tag). *Actions > Release >
 Run workflow* builds the same files as a downloadable artifact without publishing.
 
 Good to know:

@@ -1,17 +1,24 @@
-# Push a tag like v1.0.0 -> tests run, the setup wizard is built on Windows, and a GitHub release is published
-# with MediaForge_setup_v1.0.0.exe, its .sha256 (the in-app updater refuses an installer without it) and a zip.
+# Publish a release on GitHub (Releases > Draft a new release, tag v1.0.0) or push a tag like v1.0.0 ->
+# tests run, the setup wizard is built on Windows, and MediaForge_setup_v1.0.0.exe, its .sha256 (the in-app
+# updater refuses an installer without it) and a zip are attached to the release.
 # "Run workflow" by hand (and the Monday rebuild) makes the same files as a downloadable artifact, publishing nothing.
 name: Release
 
 on:
   push:
     tags: ["v*.*.*"]
+  release:
+    types: [published]
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"       # Mondays: a fresh build artifact, so the bundled yt-dlp / ffmpeg stay current
 
 permissions:
   contents: write
+
+concurrency:                  # a release made on the website can also fire the tag push: build one at a time
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -67,8 +74,16 @@ jobs:
           $files = "dist/MediaForge_setup_v$v.exe", "dist/MediaForge_setup_v$v.exe.sha256", "dist/MediaForge-$v-win64.zip"
           foreach ($f in $files) { if (-not (Test-Path $f)) { throw "Missing $f" } }
           $notes = "release-notes/$tag.md"
-          if (Test-Path $notes) {
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            # made on the website: attach the files, and fill in the notes only if none were written there
+            gh release upload $tag @files --clobber
+            if ($LASTEXITCODE) { throw "Uploading to release $tag failed" }
+            $body = gh release view $tag --json body --jq .body
+            if ([string]::IsNullOrWhiteSpace($body) -and (Test-Path $notes)) { gh release edit $tag --notes-file $notes }
+          } elseif (Test-Path $notes) {
             gh release create $tag @files --title "MediaForge $tag" --notes-file $notes
           } else {
             gh release create $tag @files --title "MediaForge $tag" --generate-notes
           }
+          if ($LASTEXITCODE) { throw "Publishing release $tag failed" }
