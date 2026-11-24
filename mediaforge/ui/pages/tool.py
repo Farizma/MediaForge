@@ -1,6 +1,8 @@
 """Shared shell for the two ffmpeg screens: file list on the left, options on the right, one action bar."""
 from __future__ import annotations
 
+import re
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
 
@@ -10,6 +12,7 @@ from ..kit.theme import SPACE, theme
 
 MEDIA_FILTER = ("Media files (*.mp4 *.mkv *.webm *.mov *.avi *.flv *.wmv *.m4v *.ts *.mts *.3gp "
                 "*.mp3 *.m4a *.aac *.flac *.wav *.ogg *.opus *.wma *.gif);;All files (*)")
+MEDIA_EXT = frozenset(re.findall(r"\*(\.\w+)", MEDIA_FILTER.split(";;")[0]))     # for files found in dropped folders
 
 
 class ToolPage(Page):

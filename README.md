@@ -64,12 +64,13 @@ mediaforge/ui/
     form.py                     one declarative field list per options dataclass
     pages/                      convert, join, download, queue, log (tool.py: shared base of convert / join)
     main_window.py              sidebar + pages, toasts, start-up checks, self-update
+    dropzone.py, instance.py    drop-anywhere overlay; one MediaForge at a time (hands files to the open window)
     sheets.py, sidebar.py, preset_bar.py   Settings / Updates sheets, navigation, presets
 assets/                         icon, bundled fonts (assets/fonts, SIL OFL)
 packaging/                      PyInstaller spec, Inno Setup script
 tools/                          build_exe.py (the Windows build), make_icon.py (draws the logo)
 release-notes/                  vX.Y.Z.md, used as the GitHub release text
-tests/                          pytest suite (builders, updater, presets, queue, UI logic, build script)
+tests/                          pytest suite (builders, updater, presets, queue, UI logic, drag and drop, build script)
 ```
 
 ## The interface
@@ -79,6 +80,12 @@ A Windows-native take on the macOS / iOS look, built from one small design syste
 - **Layout** - a sidebar (Convert, Join, Download | Queue, Log; Updates and Settings at the bottom) beside the content.
   Narrow windows collapse the sidebar to icons and stack two-column screens. Shortcuts: `Ctrl+1`..`Ctrl+5` pages,
   `Ctrl+,` Settings, `Ctrl+U` Updates, `Ctrl+Q` quit. Messages appear as toasts at the bottom instead of a status bar.
+- **Drag and drop** - drop files or folders anywhere on the window: on Convert or Join they go to that page,
+  elsewhere you pick Convert or Join by dropping on its half (folders contribute their video and audio files).
+  Drop links, or a browser tab's address, to fill the Download page. In the Queue, drag waiting or paused jobs
+  to change what runs next (or select one and press `Alt+Up` / `Alt+Down`). Files dropped on the MediaForge icon
+  or opened with Explorer's *Open with > MediaForge* open in Convert; if MediaForge is already running, the files
+  go to that window instead of opening a second one.
 - **Look** - dark colourways on near-black (Midnight Obsidian by default; pick another in
   *Settings > Appearance*, it previews live), white-tint glass buttons and cards with hairline edges, a white primary
   button, a soft glow from the top of the page in the highlight colour, colour icon tiles in the sidebar, and mono
@@ -162,7 +169,8 @@ displays whatever jobs the manager holds.
 - [x] Saved presets for ffmpeg and yt-dlp (save, delete, import / export)
 - [x] Windows packaging (PyInstaller folder/one-file build, zip, Inno Setup installer, CI workflow)
 - [x] 1.0: setup wizard on GitHub releases, self-updates from GitHub, dark colourways, new logo
-- [ ] Drag-reorder queue, editable raw-command mode, presets for the Join tab
+- [x] Drag and drop: files and folders anywhere, links to Download, queue reordering, Open with
+- [ ] Editable raw-command mode, presets for the Join tab
 - [ ] macOS / Linux packaging
 
 ## Building the Windows .exe (one click)
