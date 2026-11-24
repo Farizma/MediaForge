@@ -1,8 +1,8 @@
 """Queue: every job (convert, join, download) in one virtualised list with spring-smoothed progress."""
 from __future__ import annotations
 
-from PySide6.QtCore import QAbstractListModel, QModelIndex, QRectF, QSize, Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QFontMetrics, QPainter, QPen
+from PySide6.QtCore import QAbstractListModel, QMimeData, QModelIndex, QRectF, QSize, Qt, QUrl
+from PySide6.QtGui import QDesktopServices, QFontMetrics, QKeySequence, QPainter, QPen, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QHBoxLayout, QListView, QStackedWidget, QStyle, QStyledItemDelegate, QVBoxLayout, QWidget,
 )
@@ -13,6 +13,8 @@ from ..kit import icons
 from ..kit.theme import RADIUS, SPACE, theme
 
 S = JobStatus
+MIME = "application/x-mediaforge-job"
+MOVABLE = (S.QUEUED, S.PAUSED)                     # jobs that haven't run yet (or are on hold) can be reordered
 LOOK = {S.QUEUED: ("clock", "label3"), S.RUNNING: ("play-circle", "accent"), S.PAUSED: ("pause-circle", "orange"),
         S.DONE: ("check-circle", "green"), S.FAILED: ("x-circle", "red"), S.CANCELLED: ("x-circle", "label3")}
 
@@ -33,6 +35,48 @@ class JobModel(QAbstractListModel):
         if role == Qt.ItemDataRole.UserRole and 0 <= index.row() < len(self.m.jobs):
             return self.m.jobs[index.row()]
         return None
+
+    # -- drag to reorder: only waiting / paused jobs move; order decides what starts next
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.ItemFlag.ItemIsDropEnabled
+        f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        job = self.data(index, Qt.ItemDataRole.UserRole)
+        return f | Qt.ItemFlag.ItemIsDragEnabled if job is not None and job.status in MOVABLE else f
+
+    def supportedDropActions(self):
+        return Qt.DropAction.MoveAction
+
+    def mimeTypes(self) -> list:
+        return [MIME]
+
+    def mimeData(self, indexes) -> QMimeData:
+        data = QMimeData()
+        jobs = [self.data(i, Qt.ItemDataRole.UserRole) for i in indexes if i.isValid()]
+        data.setData(MIME, str(jobs[0].id).encode() if jobs else b"")
+        return data
+
+    def canDropMimeData(self, data, action, row, column, parent) -> bool:
+        return data.hasFormat(MIME) and not parent.isValid()      # between rows, not onto one
+
+    def dropMimeData(self, data, action, row, column, parent) -> bool:
+        if not self.canDropMimeData(data, action, row, column, parent):
+            return False
+        job_id = bytes(data.data(MIME)).decode()
+        job = next((j for j in self.m.jobs if str(j.id) == job_id), None)
+        if job is None:
+            return False
+        self.move(job, len(self.m.jobs) if row < 0 else row)
+        return False        # the move is done; False stops the view removing the dragged row afterwards
+
+    def move(self, job: Job, row: int) -> None:
+        """row: the gap to drop into, 0..len (as Qt counts it, before the job is taken out)."""
+        src = self.m.jobs.index(job)
+        if row in (src, src + 1):
+            return
+        self.beginMoveRows(QModelIndex(), src, src, QModelIndex(), row)
+        self.m.move(job, row if row < src else row - 1)
+        self.endMoveRows()
 
     def display(self, job: Job) -> Spring:
         """The progress value actually drawn: it eases toward the real one instead of jumping."""
@@ -153,6 +197,11 @@ class QueuePage(QWidget):
         self.view.setMouseTracking(True)
         self.view.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.view.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)   # drag waiting jobs to reorder
+        self.view.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.view.setDropIndicatorShown(True)
+        for keys, step in (("Alt+Up", -1), ("Alt+Down", 1)):                     # the same without a mouse
+            QShortcut(QKeySequence(keys), self.view).activated.connect(lambda d=step: self._nudge(d))
         self.empty = EmptyState("list", "No jobs yet", "Add something from Convert, Join or Download.")
         self.stack = QStackedWidget()
         self.stack.addWidget(self.empty)
@@ -179,6 +228,15 @@ class QueuePage(QWidget):
         job = self._selected()
         if job is not None:
             (self.manager.resume if job.status is S.PAUSED else self.manager.pause)(job)
+
+    def _nudge(self, d: int) -> None:
+        job = self._selected()
+        if job is None or job.status not in MOVABLE:
+            return
+        src = self.manager.jobs.index(job)
+        if 0 <= src + d < len(self.manager.jobs):
+            self.model.move(job, src + d if d < 0 else src + 2)
+            self.view.setCurrentIndex(self.model.index(self.manager.jobs.index(job)))
 
     def _retry_failed(self) -> None:
         if self.manager.retry_failed() == 0:

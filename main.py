@@ -3,6 +3,7 @@ import threading
 import traceback
 from pathlib import Path
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -52,6 +53,12 @@ def main() -> int:
         pass
     app = QApplication(sys.argv)
     app.setApplicationName("MediaForge")
+    # Files from Open with / dropped on the icon. Qt has already taken its own options out of arguments().
+    paths = [a for a in app.arguments()[1:] if Path(a).exists()]
+    from mediaforge.ui.instance import Listener, hand_over
+    if hand_over(paths):                                # already running: it opens them, this copy quits
+        return 0
+    listener = Listener()
     app.setOrganizationName("MediaForge")
     app.setStyle("Fusion")
     settings = Settings()
@@ -63,7 +70,10 @@ def main() -> int:
     if icon.exists():
         app.setWindowIcon(QIcon(str(icon)))
     window = MainWindow(settings)
+    listener.opened.connect(window.bring_forward)
     window.show()
+    if paths:
+        QTimer.singleShot(0, lambda: window.open_files(paths))
     return app.exec()
 
 

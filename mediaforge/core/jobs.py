@@ -359,6 +359,13 @@ class JobManager(QObject):
         finally:
             self._pumping = False
 
+    def move(self, job: Job, to: int) -> None:
+        """Put `job` at position `to` (after removing it). Order decides which waiting job starts next."""
+        if job in self.jobs:
+            self.jobs.remove(job)
+            self.jobs.insert(max(0, min(to, len(self.jobs))), job)
+            self._schedule_save()
+
     def set_max_parallel(self, n: int) -> None:
         self.max_parallel = max(1, n)
         self._pump()

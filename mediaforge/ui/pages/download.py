@@ -171,6 +171,15 @@ class DownloadPage(Page):
             current = self.urls.value().rstrip()
             self.urls.setValue((current + "\n" if current else "") + text)
 
+    def add_links(self, links: list) -> int:
+        """Append links (dropped on the window) that aren't in the box yet. Returns how many were new."""
+        have = set(parse_urls(self.urls.value()))
+        new = [u for u in links if u not in have]
+        if new:
+            current = self.urls.value().rstrip()
+            self.urls.setValue((current + "\n" if current else "") + "\n".join(new))
+        return len(new)
+
     def _fetch(self) -> None:
         urls = parse_urls(self.urls.value())
         if not urls:

@@ -20,6 +20,7 @@ from .pages.download import DownloadPage
 from .pages.join import JoinPage
 from .pages.log import LogPage
 from .pages.queue import QueuePage
+from .dropzone import DropOverlay, expand
 from .sheets import SettingsSheet, UpdatesSheet
 from .sidebar import Sidebar
 
@@ -79,6 +80,10 @@ class MainWindow(QMainWindow):
         lay.addWidget(surface, 1)
         self.setCentralWidget(central)
         self.toaster = Toaster(central)
+        self.setAcceptDrops(True)                        # so an outside drag always has a target to start from
+        self.drop = DropOverlay(central, self.side.current)
+        QApplication.instance().installEventFilter(self.drop)
+        self.drop.dropped.connect(self._on_dropped)
         self._wire()
         self.side.select("convert", animate=False)
 
@@ -137,6 +142,33 @@ class MainWindow(QMainWindow):
     def _on_jobs_added(self, n: int) -> None:
         self._update_badge()
         self._toast(f"Added {n} job{'s' if n != 1 else ''} to the queue.", "success", ("View Queue", lambda: self.side.select("queue")))
+
+    # ------------------------------------------------------------- drag and drop, Open with
+    def _on_dropped(self, zone: str, kind: str, items: list) -> None:
+        if kind == "links":
+            n = self.pages["download"].add_links(items)
+            self.side.select("download")
+            self._toast(f"Added {n} link{'s' if n != 1 else ''}." if n else "Those links are already in the list.", "info")
+        else:
+            self.open_files(items, zone)
+
+    def open_files(self, paths: list, page: str = "convert") -> None:
+        """Files or folders (dropped, or passed by Explorer / a second launch) go to Convert or Join."""
+        files = expand(paths)
+        if not files:
+            self._toast("No video or audio files in what you dropped.", "warning")
+            return
+        self.side.select(page)
+        self.pages[page].add_files(files)
+
+    def bring_forward(self, paths: list) -> None:
+        """Another launch of MediaForge (Open with, a file dropped on the icon) handed its files over."""
+        if self.isMinimized():
+            self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        if paths:
+            self.open_files(paths)
 
     # ------------------------------------------------------------- jobs
     def _update_badge(self, *_) -> None:
