@@ -179,12 +179,12 @@ class _Toast(QWidget):
         self.tw = min(fm.horizontalAdvance(text), theme.px(420))
         self.aw = QFontMetrics(theme.font("headline")).horizontalAdvance(action[0]) if action else 0
         self.resize(self.pad * 2 + self.isz + theme.px(10) + self.tw + (self.aw + theme.px(20) if action else 0), theme.px(52))
-        self.base = (0, 0)
+        self.base, self._leaving = (0, 0), False
         self.enter = Spring(0, 0.34, 1.0, on_change=self._place)
         self.enter.to(1.0)
         self.setAccessibleName(text)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        QTimer.singleShot(ms, self.dismiss)
+        QTimer.singleShot(ms, self, self.dismiss)      # tied to the toast: Qt cancels it if the toast is gone
         try:                                                            # screen readers announce it
             from PySide6.QtGui import QAccessible, QAccessibleEvent
             QAccessible.updateAccessibility(QAccessibleEvent(self, QAccessible.Event.Alert))
@@ -200,10 +200,14 @@ class _Toast(QWidget):
         self.update()
 
     def dismiss(self) -> None:
+        if self._leaving:                               # clicked, pushed out by a 4th toast, then timed out
+            return
+        self._leaving = True
         self.enter.to(0.0)
-        QTimer.singleShot(260, self._gone)
+        QTimer.singleShot(260, self, self._gone)
 
     def _gone(self) -> None:
+        self.enter.to(0.0, snap=True)                   # stop the spring before the widget goes away
         self.on_gone(self)
         self.deleteLater()
 

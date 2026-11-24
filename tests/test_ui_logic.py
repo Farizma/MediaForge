@@ -416,3 +416,37 @@ def test_long_dev_build_versions_are_shortened():
     long = "2026-10-01-git-0b01ed76aa-full_build-www.gyan.dev"
     assert len(_short(long)) <= 24 and _short(long).endswith("\u2026")
     assert _short("9.0.2") == "9.0.2" and _short(None) == ""
+
+
+@qt
+def test_toasts_dismissed_early_do_not_touch_deleted_widgets():
+    """Clicking a toast, or a 4th one pushing the oldest out, used to leave its slide-out spring
+    running on the deleted widget: 'Internal C++ object (_Toast) already deleted'."""
+    if not _real_qt():
+        return
+    import time
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QApplication, QWidget
+    from mediaforge.ui.kit.dialogs import Toaster
+    errors, old, snap = [], sys.excepthook, _motion.reduced_motion
+    sys.excepthook = lambda t, e, tb: errors.append(f"{t.__name__}: {e}")
+    _motion.reduced_motion = lambda: False              # the bug only shows with real animation
+    try:
+        host = QWidget()
+        host.resize(900, 600)
+        host.show()
+        toaster = Toaster(host)
+        for i in range(4):
+            toaster.show(f"toast {i}", ms=300)
+        toaster.toasts[-1].mousePressEvent(QMouseEvent(
+            QMouseEvent.Type.MouseButtonPress, QPointF(5, 5), QPointF(5, 5), Qt.MouseButton.LeftButton,
+            Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier))
+        end = time.time() + 1.2
+        while time.time() < end:
+            QApplication.processEvents()
+            time.sleep(0.01)
+    finally:
+        sys.excepthook, _motion.reduced_motion = old, snap
+    assert not errors, errors[0]
+    assert not toaster.toasts
