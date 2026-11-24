@@ -18,6 +18,11 @@ FFMPEG = shutil.which("ffmpeg") and shutil.which("ffprobe")
 if APP is not None:                                 # springs snap, so tests see final states
     from mediaforge.ui.kit import motion as _motion
     _motion.reduced_motion = lambda: True
+    # A MainWindow schedules start-up work. On a machine without ffmpeg (the Windows CI runner) that is a modal
+    # "ffmpeg not found" question, which blocks forever the next time any test runs the event loop.
+    from mediaforge.ui import main_window as _mw
+    _mw.MainWindow._startup_check = lambda self: None
+    _mw.UpdateService.startup_check = lambda self: None   # and no network calls from tests
 
 
 def qt(fn):
