@@ -15,7 +15,7 @@ AppSupportURL=https://github.com/Farizma/MediaForge/issues
 AppUpdatesURL=https://github.com/Farizma/MediaForge/releases
 AppVerName={#MyAppName} {#MyAppVersion}
 VersionInfoVersion={#MyAppVersion}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={code:DefaultDir}
 DefaultGroupName={#MyAppName}
 OutputDir=..\dist
 OutputBaseFilename=MediaForge_setup_v{#MyAppVersion}
@@ -25,8 +25,9 @@ Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+; Always installs for all users and asks for administrator permission (UAC) up front, so updating a copy in
+; Program Files (or any protected folder) can't fail half-way with 'Access is denied'.
+PrivilegesRequired=admin
 WizardStyle=modern
 ; an in-app update runs this while MediaForge is closing: wait for it, then replace the files
 CloseApplications=yes
@@ -88,4 +89,33 @@ Root: HKA; Subkey: "Software\Classes\.wma\OpenWithList\MediaForge.exe"; Flags: u
 Root: HKA; Subkey: "Software\Classes\.wmv\OpenWithList\MediaForge.exe"; Flags: uninsdeletekey
 
 [Run]
-Filename: "{app}\MediaForge.exe"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+; as the signed-in user, not the administrator: an elevated window can't take drag and drop from Explorer
+Filename: "{app}\MediaForge.exe"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+
+[Code]
+// 1.0.0 - 1.1.0 installed per user by default. Upgrade such a copy where it is, then drop its per-user
+// registration, so Settings > Apps doesn't list MediaForge twice.
+const
+  UserUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{5E1B7C2A-9D3F-4B8E-A6C1-7F0D2E4B9A31}_is1';
+
+function DefaultDir(Param: String): String;
+var
+  Old: String;
+begin
+  if RegQueryStringValue(HKCU, UserUninstallKey, 'InstallLocation', Old) and (Old <> '') then
+    Result := RemoveBackslashUnlessRoot(Old)
+  else
+    Result := ExpandConstant('{autopf}\{#MyAppName}');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if (CurStep = ssPostInstall) and RegKeyExists(HKCU, UserUninstallKey) then
+  begin
+    RegDeleteKeyIncludingSubkeys(HKCU, UserUninstallKey);
+    RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Classes\Applications\MediaForge.exe');
+    DelTree(ExpandConstant('{userprograms}\{#MyAppName}'), True, True, True);
+    if WizardIsTaskSelected('desktopicon') then
+      DeleteFile(ExpandConstant('{userdesktop}\{#MyAppName}.lnk'));
+  end;
+end;

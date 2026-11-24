@@ -87,3 +87,12 @@ def test_installer_name_matches_what_the_app_updater_looks_for(tmp_path):
     assert updater.parse_sha256(sums, name) == updater.sha256_file(exe)
     iss = (ROOT / "packaging" / "installer.iss").read_text()
     assert "OutputBaseFilename=MediaForge_setup_v{#MyAppVersion}" in iss, "the .iss and build_exe.py must agree on the name"
+
+
+def test_installer_asks_for_admin_and_launches_mediaforge_unelevated():
+    iss = (ROOT / "packaging" / "installer.iss").read_text()
+    assert "PrivilegesRequired=admin" in iss and "PrivilegesRequiredOverridesAllowed" not in iss, \
+        "a per-user install could pick a protected folder and fail with 'Access is denied'"
+    launch = next(l for l in iss.splitlines() if l.startswith('Filename: "{app}\\MediaForge.exe"'))
+    assert "runasoriginaluser" in launch, "an elevated MediaForge can't receive files dragged from Explorer"
+    assert "DefaultDirName={code:DefaultDir}" in iss and "function DefaultDir" in iss, "per-user copies upgrade in place"

@@ -6,8 +6,8 @@ with Python + PySide6.
 ## Install
 
 Download **`MediaForge_setup_vX.Y.Z.exe`** from the [latest release](https://github.com/Farizma/MediaForge/releases/latest)
-and run it. The setup wizard installs MediaForge for your account (no administrator rights needed), adds it to the
-Start menu and, if you like, the desktop, and registers an uninstaller. ffmpeg is included, and MediaForge keeps
+and run it. The setup wizard asks for administrator permission, installs MediaForge for all users (in Program Files
+by default), adds it to the Start menu and, if you like, the desktop, and registers an uninstaller. ffmpeg is included, and MediaForge keeps
 itself up to date (see [Updates](#updates-mediaforge-ffmpeg-and-yt-dlp)).
 
 The installer isn't code-signed yet, so Windows may say "Windows protected your PC": choose *More info > Run anyway*.
@@ -192,8 +192,8 @@ verifies the prerequisites. `BUILD_EXE.bat` has to stay in the project folder (i
 
 **The setup wizard (one click):** double-click **`BUILD_INSTALLER.bat`**. It finds Inno Setup 6 (and, if it's
 missing, *asks* before installing it with winget), then runs the build above with `--installer`. Result:
-`dist\MediaForge_setup_v<version>.exe` - a normal Windows setup wizard that installs for the current user
-(no administrator rights), adds Start-menu and optional desktop shortcuts, and an uninstaller - plus
+`dist\MediaForge_setup_v<version>.exe` - a normal Windows setup wizard that asks for administrator permission,
+installs for all users, adds Start-menu and optional desktop shortcuts, and an uninstaller - plus
 `dist\MediaForge_setup_v<version>.exe.sha256`.
 
 **Releases:** bump `__version__` in `mediaforge/__init__.py`, add `release-notes/v<version>.md`, then on GitHub
