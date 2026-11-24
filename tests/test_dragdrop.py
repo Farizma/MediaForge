@@ -149,15 +149,29 @@ def test_queue_drag_reorders_waiting_jobs_and_saves(tmp_path):
 
 # ----------------------------------------------------------------- Open with / a second launch
 def test_second_launch_hands_its_files_to_the_first():
-    from mediaforge.ui.instance import Listener, hand_over
+    """The second launch is a separate process, as it is when Explorer starts it."""
+    import subprocess
+    import sys
+    from mediaforge.ui.instance import Listener
     name = f"mf-test-{uuid.uuid4().hex[:8]}"
-    assert not hand_over(["x"], name), "nothing running yet"
+    root = str(Path(__file__).resolve().parents[1])
+
+    def launch(paths):
+        code = ("import sys; sys.path.insert(0, sys.argv[1]); from PySide6.QtCore import QCoreApplication; "
+                "a = QCoreApplication([]); from mediaforge.ui.instance import hand_over; "
+                "sys.exit(0 if hand_over(sys.argv[3:], sys.argv[2]) else 3)")
+        proc = subprocess.Popen([sys.executable, "-c", code, root, name, *paths])
+        while proc.poll() is None:
+            pump(0.05)                                   # the first MediaForge keeps its event loop running
+        return proc.returncode
+
+    assert launch(["x"]) == 3, "nothing running yet"
     listener, got = Listener(name), []
     listener.opened.connect(got.append)
-    assert hand_over([r"C:\Videos\a b.mp4", "/tmp/c.mkv"], name)
-    pump(0.5)
+    assert launch([r"C:\Videos\a b.mp4", "/tmp/c.mkv"]) == 0
+    pump(0.3)
     assert got == [[r"C:\Videos\a b.mp4", "/tmp/c.mkv"]]
-    assert hand_over([], name)                           # a plain second launch just brings the window forward
-    pump(0.5)
+    assert launch([]) == 0                               # a plain second launch just brings the window forward
+    pump(0.3)
     assert got[-1] == []
     listener.server.close()

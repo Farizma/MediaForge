@@ -21,9 +21,10 @@ def hand_over(paths: list, name: str | None = None) -> bool:
     sock.connectToServer(name or server_name())
     if not sock.waitForConnected(500):
         return False
-    sock.write(json.dumps([str(p) for p in paths]).encode("utf-8"))
-    sock.flush()
+    sock.write(json.dumps([str(p) for p in paths]).encode("utf-8") + b"\n")
     sock.waitForBytesWritten(2000)
+    # Wait for the reply before hanging up: on Windows a pipe closed straight after writing can lose the data.
+    sock.waitForReadyRead(3000)
     sock.disconnectFromServer()
     return True
 
@@ -45,14 +46,17 @@ class Listener(QObject):
         while self.server.hasPendingConnections():
             sock = self.server.nextPendingConnection()
             buf = bytearray()
-            sock.readyRead.connect(lambda s=sock, b=buf: b.extend(bytes(s.readAll())))
-            sock.disconnected.connect(lambda s=sock, b=buf: self._done(s, b))
+            sock.readyRead.connect(lambda s=sock, b=buf: self._read(s, b))
+            sock.disconnected.connect(sock.deleteLater)
 
-    def _done(self, sock, buf: bytearray) -> None:
+    def _read(self, sock, buf: bytearray) -> None:
         buf.extend(bytes(sock.readAll()))
-        sock.deleteLater()
+        if b"\n" not in buf:
+            return                                     # one JSON line per launch; wait for the rest
+        sock.write(b"ok\n")                           # tells the other launch it may hang up now
+        sock.flush()
         try:
-            paths = json.loads(buf.decode("utf-8") or "[]")
+            paths = json.loads(bytes(buf).split(b"\n", 1)[0].decode("utf-8") or "[]")
         except ValueError:
             return
         if isinstance(paths, list):
