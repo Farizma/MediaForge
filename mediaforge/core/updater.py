@@ -273,7 +273,11 @@ def download_app_installer(data_dir: Path, release: AppRelease, progress: Option
 
 
 def launch_installer(path: Path) -> None:
-    """Start the setup wizard on its own; MediaForge then quits so the files can be replaced."""
+    """Start the setup wizard on its own; MediaForge then quits so the files can be replaced.
+    On Windows it goes through the shell, which shows the administrator (UAC) prompt the installer asks for."""
+    if sys.platform == "win32":
+        os.startfile(str(path))  # type: ignore[attr-defined]
+        return
     flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     subprocess.Popen([str(path)], close_fds=True, creationflags=flags)
 
