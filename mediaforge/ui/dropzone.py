@@ -15,7 +15,7 @@ from shiboken6 import isValid
 
 from .kit import Spring, icons, qc, theme
 from .kit.motion import tween
-from .kit.theme import RADIUS, SPACE
+from .kit.theme import RADIUS, SPACE, mix
 from .pages.tool import MEDIA_EXT
 
 MAX_FOUND = 500                                        # files taken from dropped folders
@@ -176,12 +176,12 @@ class DropOverlay(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setOpacity(self.level)
-        p.fillRect(self.rect(), qc((0, 0, 0, 165)))   # the same wash as behind a sheet
+        p.fillRect(self.rect(), qc((0, 0, 0, 200)))   # darker than behind a sheet: the labels must win over the page
         rad, pal = theme.px(RADIUS["xl"]), theme.p
         detail = describe(self.kind, self.items) if self.kind else ""
         for z, r in self._rects().items():
             hot = max(0.0, min(1.0, self.hot[z].value))
-            p.setBrush(qc((255, 255, 255, round(10 + 20 * hot))))
+            p.setBrush(mix(pal.sheet + (235,), pal.card + (245,), hot))   # solid enough that nothing shows through
             pen = QPen(qc(pal.label3) if hot < 0.5 else qc(pal.accent), theme.px(2), Qt.PenStyle.DashLine)
             pen.setDashPattern([4, 3])
             p.setPen(pen)
